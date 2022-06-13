@@ -4,7 +4,9 @@ import json
 import requests
 from pprint import pprint
 
+from dateutil import tz
 from dateutil.tz import gettz
+from datetime import datetime
 
 url = requests.get('http://ergast.com/api/f1/current.json')
 jsonData = url.text

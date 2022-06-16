@@ -23,6 +23,8 @@ normalRaceWeekend = ['FirstPractice',
                      'SecondPractice', 'ThirdPractice', 'Qualifying']
 sprintWeekend = ['FirstPractice', 'Qualifying', 'SecondPractice', 'Sprint']
 
+FP3 = 'ThirdPractice'
+
 
 def nextRace():
     i = 0
@@ -42,6 +44,8 @@ def nextRace():
 def nextEvent(raceNumber):
     raceNumber = raceNumber - 1
     timeNow = datetime.now(None)
+    raceName = data['MRData']['RaceTable']['Races'][raceNumber]['raceName']
+    print(f'Next Race is {raceName}')
     dateFP1 = data['MRData']['RaceTable']['Races'][raceNumber]['FirstPractice']['date']
     timeFP1 = data['MRData']['RaceTable']['Races'][raceNumber]['FirstPractice']['time']
     dtStrFP1 = dateFP1 + ' ' + timeFP1
@@ -52,18 +56,36 @@ def nextEvent(raceNumber):
     dtStrFP2 = dateFP2 + ' ' + timeFP2
     FP2_UTC = datetime.strptime(dtStrFP2, '%Y-%m-%d %H:%M:%SZ')
 
-    dateFP3 = data['MRData']['RaceTable']['Races'][raceNumber]['ThirdPractice']['date']
-    timeFP3 = data['MRData']['RaceTable']['Races'][raceNumber]['ThirdPractice']['time']
-    dtStrFP3 = dateFP3 + ' ' + timeFP3
-    FP3_UTC = datetime.strptime(dtStrFP3, '%Y-%m-%d %H:%M:%SZ')
-
     dateQuali = data['MRData']['RaceTable']['Races'][raceNumber]['Qualifying']['date']
     timeQuali = data['MRData']['RaceTable']['Races'][raceNumber]['Qualifying']['time']
     dtStrQuali = dateQuali + ' ' + timeQuali
     Quali_UTC = datetime.strptime(dtStrQuali, '%Y-%m-%d %H:%M:%SZ')
 
-    listOfEvents = [Quali_UTC, FP3_UTC, FP2_UTC, FP1_UTC]
-    print(min(listOfEvents, key=lambda x: (x < timeNow, abs(x-timeNow))))
+    if FP3 in data['MRData']['RaceTable']['Races'][raceNumber]:
+        dateFP3 = data['MRData']['RaceTable']['Races'][raceNumber]['ThirdPractice']['date']
+        timeFP3 = data['MRData']['RaceTable']['Races'][raceNumber]['ThirdPractice']['time']
+        dtStrFP3 = dateFP3 + ' ' + timeFP3
+        FP3_UTC = datetime.strptime(dtStrFP3, '%Y-%m-%d %H:%M:%SZ')
+        listOfEvents = [FP1_UTC, FP2_UTC, FP3_UTC, Quali_UTC]
+        nextSessionTime = min(listOfEvents, key=lambda x: (
+            x < timeNow, abs(x-timeNow)))
+        nextSessionName = listOfEvents.index(nextSessionTime)
+        sessionTimeLocal = nextSessionTime.astimezone(TZ_IN).strftime('%Y-%m-%d %H:%M:%S')
+        print(
+            f'Session: {normalRaceWeekend[nextSessionName]} at {sessionTimeLocal}')
+    else:
+        dateSprint = data['MRData']['RaceTable']['Races'][raceNumber]['Sprint']['date']
+        timeSprint = data['MRData']['RaceTable']['Races'][raceNumber]['Sprint']['time']
+        dtStrSprint = dateSprint + ' ' + timeSprint
+        Sprint_UTC = datetime.strptime(dtStrSprint, '%Y-%m-%d %H:%M:%SZ')
+        listOfEvents = [FP1_UTC, Quali_UTC, FP2_UTC, Sprint_UTC]
+        nextSessionTime = min(listOfEvents, key=lambda x: (
+            x < timeNow, abs(x-timeNow)))
+        nextSessionName = listOfEvents.index(nextSessionTime)
+        sessionTimeLocal = nextSessionTime.astimezone(TZ_IN).strftime('%Y-%m-%d %H:%M:%S')
+        print(
+            f'Session: {normalRaceWeekend[nextSessionName]} at {sessionTimeLocal}')
 
 
 nextEvent(nextRace())
+nextEvent(21)

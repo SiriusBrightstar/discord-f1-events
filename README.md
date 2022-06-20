@@ -1,2 +1,24 @@
 # F1 Next Event
-A Python script that returns the next F1 event
+A Python script that returns the next F1 Event
+
+## Screenshot:
+
+## Steps to get this bot on your server
+- Create a bot using this guide: https://www.androidpolice.com/how-to-make-discord-bot/
+- Clone this repo
+```
+git clone https://github.com/SiriusBrightstar/f1-events.git
+cd f1-events/
+nano src/auth.py
+```
+- Copy the Token from the Bot section and paste it in `/src/auth.py`
+- Fill up all the variables on `/src/auth.py`
+- Create docker image and run the container
+```
+sudo docker build . -t f1-events
+sudo docker images
+```
+- Copy the Image ID
+```
+sudo docker run -d --restart always <PASTE DOCKER IMAGE ID HERE>
+```

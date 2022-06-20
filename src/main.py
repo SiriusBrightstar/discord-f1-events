@@ -1,25 +1,40 @@
-# Getting data using Ergast API
+"""
+Discord Sidebar bot to display the next F1 event
+
+By SiriusBrightstar
+"""
 
 import json
+import logging
 import requests
-from pprint import pprint
 
 import pytz
-from datetime import datetime, tzinfo
+from datetime import datetime
+
+import discord
+from discord.ext import tasks
+
+from auth import TOKEN, GUILD_ID, BOT_ID, LOCAL_TIMEZONE
+
+logging.basicConfig(filename='bot.log',
+                    format='%(asctime)s -> %(levelname)s: %(message)s\n-----', level=logging.INFO)
+
+REFRESH_RATE = 30*60    # Refresh every 30 mins
+
+client = discord.Client()
+
 
 TZ_UTC = pytz.timezone('UTC')
-TZ_IN = pytz.timezone('Asia/Kolkata')
+TZ_IN = pytz.timezone(LOCAL_TIMEZONE)       # Change this to your Local Time
 
 url = requests.get('http://ergast.com/api/f1/current.json')
 jsonData = url.text
 data = json.loads(jsonData)
-# pprint(data['MRData']['RaceTable']['Races'])
 
 raceData = data['MRData']['RaceTable']['Races']
 
-normalRaceWeekend = ['FirstPractice',
-                     'SecondPractice', 'ThirdPractice', 'Qualifying', 'Race']
-sprintWeekend = ['FirstPractice', 'Qualifying', 'SecondPractice', 'Sprint', 'Race']
+normalRaceWeekend = ['FP1', 'FP2', 'FP3', 'Q', 'Race']
+sprintWeekend = ['FP1', 'Q', 'FP2', 'S', 'Race']
 
 
 def nextRace():
@@ -31,16 +46,21 @@ def nextRace():
         raceTimeUTC = datetime.strptime(dtStr, '%Y-%m-%d %H:%M:%SZ')
         raceTimeUTC = raceTimeUTC.replace(tzinfo=TZ_UTC)
         timeNow = datetime.now(TZ_UTC)
-        raceName = data['MRData']['RaceTable']['Races'][i]['raceName']
+        raceName = data['MRData']['RaceTable']['Races'][i]['raceName'].replace(
+            'Grand Prix', 'GP')
         if (raceTimeUTC > timeNow):
             print(f'Next Race is {raceName}')
             break
-    return i+1
+    return i+1  # Adding 1 to get race number
 
 
 def nextEvent(raceNumber):
-    raceNumber = raceNumber - 1
+    raceNumber = raceNumber - 1     # Subtracting 1 as the list index starts from 0
     timeNow = datetime.now(TZ_UTC)
+
+    raceName = data['MRData']['RaceTable']['Races'][raceNumber]['raceName'].replace(
+        'Grand Prix', 'GP')
+
     dateFP1 = data['MRData']['RaceTable']['Races'][raceNumber]['FirstPractice']['date']
     timeFP1 = data['MRData']['RaceTable']['Races'][raceNumber]['FirstPractice']['time']
     dtStrFP1 = dateFP1 + ' ' + timeFP1
@@ -72,12 +92,13 @@ def nextEvent(raceNumber):
         FP3_UTC = datetime.strptime(dtStrFP3, '%Y-%m-%d %H:%M:%SZ')
         FP3_UTC = FP3_UTC.replace(tzinfo=TZ_UTC)
         listOfEvents = [FP1_UTC, FP2_UTC, FP3_UTC, Quali_UTC, Race_UTC]
-        nextSessionTime = min([date for date in listOfEvents if date >= timeNow])
-        nextSessionName = listOfEvents.index(nextSessionTime)
+        nextSessionTime = min(
+            [date for date in listOfEvents if date >= timeNow])
+        nextSessionName = normalRaceWeekend[listOfEvents.index(
+            nextSessionTime)]
         sessionTimeLocal = nextSessionTime.replace(
-            tzinfo=TZ_UTC).astimezone(TZ_IN).strftime('%Y-%m-%d %H:%M:%S %Z%z')
-        print(
-            f'Session: {normalRaceWeekend[nextSessionName]} at {sessionTimeLocal}')
+            tzinfo=TZ_UTC).astimezone(TZ_IN).strftime('%d %b %H:%M')
+        logging.info(f'Session: {nextSessionName} at {sessionTimeLocal}')
     else:
         dateSprint = data['MRData']['RaceTable']['Races'][raceNumber]['Sprint']['date']
         timeSprint = data['MRData']['RaceTable']['Races'][raceNumber]['Sprint']['time']
@@ -85,12 +106,42 @@ def nextEvent(raceNumber):
         Sprint_UTC = datetime.strptime(dtStrSprint, '%Y-%m-%d %H:%M:%SZ')
         Sprint_UTC = Sprint_UTC.replace(tzinfo=TZ_UTC)
         listOfEvents = [FP1_UTC, Quali_UTC, FP2_UTC, Sprint_UTC, Race_UTC]
-        nextSessionTime = min([date for date in listOfEvents if date >= timeNow])
-        nextSessionName = listOfEvents.index(nextSessionTime)
+        nextSessionTime = min(
+            [date for date in listOfEvents if date >= timeNow])
+        nextSessionName = sprintWeekend[listOfEvents.index(nextSessionTime)]
         sessionTimeLocal = nextSessionTime.replace(
-            tzinfo=TZ_IN).strftime('%Y-%m-%d %H:%M:%S %Z%z')
-        print(
-            f'Session: {sprintWeekend[nextSessionName]} at {sessionTimeLocal}')
+            tzinfo=TZ_IN).strftime('%d %b %H:%M')
+        logging.info(f'Session: {nextSessionName} at {sessionTimeLocal}')
+
+    return [raceName, nextSessionName, sessionTimeLocal]
 
 
-nextEvent(nextRace())
+@tasks.loop(seconds=REFRESH_RATE)
+async def updateData():
+    try:
+        guild = client.get_guild(GUILD_ID)
+        bot_account = guild.get_member(BOT_ID)
+        raceDetails = nextEvent(nextRace())
+        nickname = raceDetails[1] + ': ' + raceDetails[2]
+        watchingActivity = raceDetails[0]
+        await bot_account.edit(nick=nickname)
+        await client.change_presence(activity=discord.Activity(type=discord.ActivityType.watching, name=watchingActivity), status=discord.Status.online)
+        logging.info(nickname)
+        logging.info(watchingActivity)
+
+    except RuntimeError:
+        logging.error(
+            'Failed to run updateData(): Runtime Error', exc_info=True)
+    else:
+        logging.info('Some other issue', exc_info=True)
+
+
+@client.event
+async def on_ready():
+    logging.info('Logging in as {0.user}'.format(client))
+    if not updateData.is_running():
+        updateData.start()
+
+
+client.run(TOKEN)
+# nextEvent(nextRace())

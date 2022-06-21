@@ -2,6 +2,7 @@
 A Python script that returns the next F1 Event
 
 ## Screenshot:
+![Screenshot_1](https://github.com/SiriusBrightstar/f1-events/blob/main/Screenshots/F1_Bot.png)
 
 ## Steps to get this bot on your server
 - Create a bot using this guide: https://www.androidpolice.com/how-to-make-discord-bot/

@@ -15,3 +15,4 @@ BOT_ID = 9
 
 # Local Timezone Details
 LOCAL_TIMEZONE = 'Asia/Kolkata'     # Refer https://timezonedb.com/time-zones
+STR_TIME_FORMAT = '%d %b %H:%M' # Refer: https://jeffkayser.com/projects/date-format-string-composer/index.html

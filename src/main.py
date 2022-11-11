@@ -25,7 +25,7 @@ client = discord.Client()
 
 
 TZ_UTC = pytz.timezone('UTC')
-TZ_IN = pytz.timezone(LOCAL_TIMEZONE)       # Change this to your Local Time
+TZ_LOCAL = pytz.timezone(LOCAL_TIMEZONE)       # Change this to your Local Time
 
 url = requests.get('http://ergast.com/api/f1/current.json')
 jsonData = url.text
@@ -97,7 +97,7 @@ def nextEvent(raceNumber):
         nextSessionName = normalRaceWeekend[listOfEvents.index(
             nextSessionTime)]
         sessionTimeLocal = nextSessionTime.replace(
-            tzinfo=TZ_UTC).astimezone(TZ_IN).strftime(STR_TIME_FORMAT)
+            tzinfo=TZ_UTC).astimezone(TZ_LOCAL).strftime(STR_TIME_FORMAT)
         logging.info(f'Session: {nextSessionName} at {sessionTimeLocal}')
     else:
         dateSprint = raceData[raceNumber]['Sprint']['date']
@@ -110,7 +110,7 @@ def nextEvent(raceNumber):
             [date for date in listOfEvents if date >= timeNow])
         nextSessionName = sprintWeekend[listOfEvents.index(nextSessionTime)]
         sessionTimeLocal = nextSessionTime.replace(
-            tzinfo=TZ_IN).strftime(STR_TIME_FORMAT)
+            tzinfo=TZ_UTC).astimezone(TZ_LOCAL).strftime(STR_TIME_FORMAT)
         logging.info(f'Session: {nextSessionName} at {sessionTimeLocal}')
 
     return [raceName, nextSessionName, sessionTimeLocal]
